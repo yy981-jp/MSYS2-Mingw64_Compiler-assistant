@@ -16,8 +16,7 @@
 
 namespace fs = std::filesystem;
 std::string temp(normalize_path(std::getenv("temp"))), currentPath,
-			option, exename, sourceFile, mocFilePath, include_qt6, addlibrary, addlibrary_o, original,
-			icon, icon_obj, dllCompileCMD;
+			option, exename, sourceFile, include_qt6, addlibrary, addlibrary_o, original, icon, icon_obj, dllCompileCMD;
 std::string mkpath = temp + "/_.mk";
 bool enableOriginal_qt(false), enableIcon(false), isCompiling(false), compilerCPPMode(true), dllMode(false);
 int cmd(const std::string& command) {return std::system(command.c_str());}
@@ -162,7 +161,7 @@ void writeMK() {
 	if (original.contains(":nog++")) compilerCPPMode = false; else compilerCPPMode = true;
 	if (original.contains(":dll")) {
 		dllCompileCMD =
-			compilerM() + " -shared -o " + exename + ".dll " + sourceFile + ".cpp " + (enableOriginal_qt? mocFilePath : "") +
+			compilerM() + " -shared -o " + exename + ".dll " + sourceFile + ".cpp " + 
 			cp932 + " " + stdcpp23 + " " + option + " -Ic:/msys64/mingw64/include " + include_qt6 + " -Lc:/msys64/mingw64/lib " + addlibrary_o;
 			std::cout << "dll::: " << dll << "\n";
 		bool dllMode = true;
@@ -174,7 +173,7 @@ void writeMK() {
 		<< "CC  = " << compilerM()
 		<< "\nCFLAGS  = " << cp932 << " " << stdcpp23 << " " << option
 		<< "\nTARGET  = " << exename << ".exe"
-		<< "\nSRCS    = " << sourceFile << ".cpp" << (enableOriginal_qt? " " + mocFilePath : "")
+		<< "\nSRCS    = " << sourceFile << ".cpp"
 		<< "\nOBJS    = " << sourceFile << ".o" << (enableIcon? " " + icon_obj : "")
 		<< "\nINCDIR  = -Ic:/msys64/mingw64/include " << include_qt6
 		<< "\nLIBDIR  = -Lc:/msys64/mingw64/lib"
@@ -209,7 +208,9 @@ inline void compile() {
 					  << "task:	コンパイル処理の優先度\n"
 					  << "flag:	フラグを設定\n"
 					  << "run:	コンパイル済みアプリを実行";
-		else if (input == "moc") cmd("c:/msys64/mingw64/share/qt6/bin/moc.exe " + mocFilePath);
+		else if (input == "moc") {
+			cmd("c:/msys64/mingw64/share/qt6/bin/moc.exe " + sourceFile + ".cpp -o _.moc");
+		}
 		else if (input == "write") writeMK();
 		else if (input.starts_with("icon")) {
 			if (input.size()==4) {
@@ -258,6 +259,7 @@ inline void compile() {
 		} // set.end
 		else if (input == "exit") break;
 		else if (input == "") core();
+		else if (input.contains(" "));
 		else std::cerr << "有効なコマンドではありません help と打ってコマンドを確認してください";
 		std::cout << "\n";
 	}
@@ -284,7 +286,6 @@ int main(int argc, char *argv[]) {
 	}
 	// set paths
 	sourceFile = fs::path(argv[1]).stem().string();
-	mocFilePath = sourceFile + ".cpp -o " + temp + "/" + sourceFile + ".moc";
 	SetConsoleTitle(std::string("[" + sourceFile + "] MSYS2-Mingw64_New-Compiler").c_str());
 
 	bool inputMK = false;

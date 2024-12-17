@@ -1,0 +1,4 @@
+__COMPILER
+-lz
+-std=c++23
+null

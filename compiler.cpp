@@ -163,7 +163,7 @@ void writeMK() {
 		dllCompileCMD =
 			compilerM() + " -shared -o " + exename + ".dll " + sourceFile + ".cpp " + 
 			cp932 + " " + stdcpp23 + " " + option + " -Ic:/msys64/mingw64/include " + include_qt6 + " -Lc:/msys64/mingw64/lib " + addlibrary_o;
-			std::cout << "dll::: " << dll << "\n";
+			std::cout << "dll::: " << dllCompileCMD << "\n";
 		bool dllMode = true;
 		return;
 	}
@@ -200,16 +200,23 @@ inline void compile() {
 		std::cout << "> ";
 		std::getline(std::cin,input); //指示
 		if (input == "help")
-			std::cout << "moc:	.mocファイルを生成\n"
+			std::cout << "moc:	.mocファイルを生成\n 空白を入れてその後にファイル名を入力も可"
 					  << "write:	.mkファイルを生成\n"
 					  << "exit:	終了\n"
 					  << "set:	変数を変更(詳細はcustomと入力してください)\n"
 					  << "		例:   set sou test\n"
 					  << "task:	コンパイル処理の優先度\n"
 					  << "flag:	フラグを設定\n"
+					  << "cmd:	入力されたコンソールコマンドを実行\n"
 					  << "run:	コンパイル済みアプリを実行";
-		else if (input == "moc") {
-			cmd("c:/msys64/mingw64/share/qt6/bin/moc.exe " + sourceFile + ".cpp -o _.moc");
+		else if (input.starts_with("moc")) {
+			if (input == "moc") cmd("c:/msys64/mingw64/share/qt6/bin/moc.exe " + sourceFile + ".cpp -o _.moc");
+			else if (input.size() == 4) std::cerr << "第二層入力エラー";
+			else {
+				std::string i_moc = fs::path(input.substr(4)).stem().string();
+				std::cout << "c:/msys64/mingw64/share/qt6/bin/moc.exe " + input.substr(4) + " -o " + i_moc + ".moc\n";
+				cmd("c:/msys64/mingw64/share/qt6/bin/moc.exe " + input.substr(4) + " -o" + i_moc + ".moc");
+			}
 		}
 		else if (input == "write") writeMK();
 		else if (input.starts_with("icon")) {
@@ -224,13 +231,14 @@ inline void compile() {
 				else std::cerr << "第二層入力エラー";
 			}
 		}
-		else if (input.size() >= 4 && input.starts_with("task")) {
+		else if (input.starts_with("task")) {
 			if (input == "task") input += " help";
 			if (input == "task ") input += "help";
 			input.erase(0,5);
 			if (input.substr(0,4)=="help") std::cout << "例: task [1:高 2:通常以上 3:通常 4:通常以下 5:低]\n現在: " << taskLevel;
 			else taskLevel = std::stoi(input.substr(0,1));
 		}
+		else if (input.starts_with("cmd") && input.size()>=5) cmd(input.substr(4)); // 空白分を考慮して4(3ではない) で、cmdの内容がなければ意味ないから5
 		else if (input == "run") cmd("call " + sourceFile + ".exe");
 		else if (input.size() >= 3 && input.starts_with("set")) { // set.begin
 			if (input == "set") input += " help";
@@ -259,7 +267,6 @@ inline void compile() {
 		} // set.end
 		else if (input == "exit") break;
 		else if (input == "") core();
-		else if (input.contains(" "));
 		else std::cerr << "有効なコマンドではありません help と打ってコマンドを確認してください";
 		std::cout << "\n";
 	}

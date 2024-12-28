@@ -9,9 +9,9 @@
 #include <zlib.h>
 #include <cstdint>
 #include <thread>
-#include <yy981/tools/dll.h>
-#include <yy981/tools/andor.h>
-#include <yy981/tools/path.h>
+#include <yy981/dll.h>
+#include <yy981/andor.h>
+#include <yy981/path.h>
 
 
 namespace fs = std::filesystem;
@@ -65,8 +65,8 @@ void readOldYBP() {
 void upgradeYBP() {
 	readOldYBP();
 	std::string original_uy;
-	if (original.contains("qt")) original_uy += ":qt ";
-	if (original.contains("nocp932")) original_uy += ":nocp932 ";
+	if (original.contains("qt")) original_uy += "/qt ";
+	if (original.contains("nocp932")) original_uy += "/nocp932 ";
 	std::ofstream(sourceFile + ".ybp2") << (sourceFile.empty()? "null" : sourceFile) << "\n" 
 										<< (exename.empty()? "null" : exename) << "\n" 
 										<< (addlibrary.empty()? "null" : addlibrary) << "\n" 
@@ -94,6 +94,13 @@ void task() {
 void userInput() {
 	std::cout << "独自オプション: ";
 	std::getline(std::cin,original);
+	if (original == "skip") {
+		original.clear();
+		exename.clear();
+		addlibrary.clear();
+		option.clear();
+		return;
+	}
 	std::cout << "実行ファイル名(拡張子除く): ";
 	std::getline(std::cin,exename);
 	std::cout << "追加ライブラリ(各ファイル名の前に-lを追加): ";
@@ -146,20 +153,20 @@ void writeMK() {
 	std::string stdcpp23, cp932;
 	if (exename.empty()) exename=sourceFile;
 	// 入力処理
-	if (!original.contains(":nocp932")) cp932 = "-fexec-charset=cp932";
-	if (original.contains(":qt")) {
+	if (!original.contains("/nocp932")) cp932 = "-fexec-charset=cp932";
+	if (original.contains("/qt")) {
 		addlibrary_o = addlibrary + " -lQt6Core -lQt6Widgets -lQt6Gui";
 		include_qt6 = "-Ic:/msys64/mingw64/include/qt6";
 		enableOriginal_qt = true;
 	}
-	if (!original.contains(":nocpp23")) stdcpp23 = "-std=c++23";
-	if (original.contains(":icon")) {
+	if (!original.contains("/nocpp23")) stdcpp23 = "-std=c++23";
+	if (original.contains("/icon")) {
 		if (original.substr(5,1) != "=") std::cerr << "使い方が違います icon=<ファイルパス>";
 		icon = original.substr(original.find("icon")+5);
 		// std::cout << "icon_ori: " << icon << "\n";
 	}
-	if (original.contains(":nog++")) compilerCPPMode = false; else compilerCPPMode = true;
-	if (original.contains(":dll")) {
+	if (original.contains("/nog++")) compilerCPPMode = false; else compilerCPPMode = true;
+	if (original.contains("/dll")) {
 		dllCompileCMD =
 			compilerM() + " -shared -o " + exename + ".dll " + sourceFile + ".cpp " + 
 			cp932 + " " + stdcpp23 + " " + option + " -Ic:/msys64/mingw64/include " + include_qt6 + " -Lc:/msys64/mingw64/lib " + addlibrary_o;

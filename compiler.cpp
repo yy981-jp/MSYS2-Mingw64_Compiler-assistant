@@ -123,7 +123,7 @@ void readYBP(char* argv[]) {
         switch (loop) {
             case 1: if (line=="null") {std::cerr << "必須要素のSourceFileがnullです";exit(3);} else sourceFile = line; break;
             case 2: if (line=="null") exename = sourceFile; else exename = line; break;
-            case 3: if (line=="null") addlibrary_o = ""; else addlibrary = line; break;
+            case 3: if (line=="null") addlibrary = ""; else addlibrary = line; break;
             case 4: if (line=="null") option = ""; else option = line; break;
             case 5: if (line=="null") original = ""; else original = line; break;
             default:

@@ -158,7 +158,7 @@ void writeMK() {
 		addlibrary_o = addlibrary + " -lQt6Core -lQt6Widgets -lQt6Gui";
 		include_qt6 = "-Ic:/msys64/mingw64/include/qt6";
 		enableOriginal_qt = true;
-	}
+	} else addlibrary_o = addlibrary;
 	if (!original.contains("/nocpp23")) stdcpp23 = "-std=c++23";
 	if (original.contains("/icon")) {
 		if (original.substr(5,1) != "=") std::cerr << "使い方が違います icon=<ファイルパス>";
@@ -210,7 +210,7 @@ inline void compile() {
 			std::cout << "moc:	.mocファイルを生成\n 空白を入れてその後にファイル名を入力も可"
 					  << "write:	.mkファイルを生成\n"
 					  << "exit:	終了\n"
-					  << "set:	変数を変更(詳細はcustomと入力してください)\n"
+					  << "set:	変数を変更(詳細はsetと入力してください)\n"
 					  << "		例:   set sou test\n"
 					  << "task:	コンパイル処理の優先度\n"
 					  << "flag:	フラグを設定\n"
@@ -256,7 +256,7 @@ inline void compile() {
 			if (input.substr(0,4)=="help") {
 				std::cout << "        sou: ソースファイル名 (現在: " << sourceFile << " )\n"
 						  << "        exe: 実行ファイル名 (現在: " << exename << " )\n"
-						  << "        lib: 追加ライブラリ (現在: " << addlibrary << " )\n"
+						  << "        lib: 追加ライブラリ (現在: I:" << addlibrary << " O: " << addlibrary_o << " )\n"
 						  << "        opt: オプション (現在: " << option << " )\n"
 						  << "        ori: 独自オプション (現在: " << original << " )\n"
 						  << "        tit: ウィンドウタイトル (現在: " << windowTitle << " )\n"

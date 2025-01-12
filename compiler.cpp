@@ -18,7 +18,7 @@ namespace fs = std::filesystem;
 std::string temp(normalize_path(std::getenv("temp"))), currentPath,
 			option, exename, sourceFile, include_qt6, addlibrary, addlibrary_o, original, icon, icon_obj, dllCompileCMD;
 std::string mkpath = temp + "/_.mk";
-bool enableOriginal_qt(false), enableIcon(false), isCompiling(false), compilerCPPMode(true), dllMode(false);
+bool enableOriginal_qt(false), enableIcon(false), isCompiling(false), compilerCPPMode(true);
 int cmd(const std::string& command) {return std::system(command.c_str());}
 std::string compilerM() {if (compilerCPPMode) return "g++"; else return "gcc";}
 int taskLevel = 3;
@@ -168,10 +168,8 @@ void writeMK() {
 	if (original.contains("/nog++")) compilerCPPMode = false; else compilerCPPMode = true;
 	if (original.contains("/dll")) {
 		dllCompileCMD =
-			compilerM() + " -shared -o " + exename + ".dll " + sourceFile + ".cpp " + 
+			compilerM() + " -shared -o " + exename + " " + sourceFile + " " + 
 			cp932 + " " + stdcpp23 + " " + option + " -Ic:/msys64/mingw64/include " + include_qt6 + " -Lc:/msys64/mingw64/lib " + addlibrary_o;
-			std::cout << "dll::: " << dllCompileCMD << "\n";
-		bool dllMode = true;
 		return;
 	}
 
@@ -196,7 +194,7 @@ inline void core() {
 	task();
 	flags();
 	/*if (calculateCRC32(mkpath) != hash) 未来の自分へ 効率化頼んだ*/writeMK();
-	int returnCode = cmd((dllMode? dllCompileCMD : "c:/GnuWin32/bin/make.exe -B -f " + mkpath)); // 核
+	int returnCode = cmd((dllCompileCMD.empty()? "c:/GnuWin32/bin/make.exe -B -f " + mkpath : dllCompileCMD)); // 核
 	if (returnCode==0) std::cout << "成功\n"; else std::cout << "エラー[" << returnCode << "]\n\n";
 }
 

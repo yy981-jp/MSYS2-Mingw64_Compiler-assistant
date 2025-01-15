@@ -1,74 +1,97 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <vector>
 #include <cstdint>
 #include <cstdio>
 #include <windows.h>
 #include <tlhelp32.h>
 #include <zlib.h>
-#define BUILD
-#include <yy981/tools/dll.h>
-
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
-
+#include "stb_image.h"
+#define BUILD
+#include <yy981/dll.h>
 
 extern "C" {
 
-// ICO変換処理を関数化
-DLL int pngToIco(const std::string& in_s, const std::string& ou_s) {
-	const char* inputFile = in_s.c_str();
-	const char* outputFile = ou_s.c_str();
-    // 画像を読み込む
+// ICOヘッダー構造体
+struct IcoHeader {
+    uint16_t reserved;  // 予約領域（常に0）
+    uint16_t type;      // ファイルタイプ（1: ICO, 2: CUR）
+    uint16_t count;     // 画像エントリの数
+};
+
+// ICOエントリ構造体
+struct IcoEntry {
+    uint8_t width;         // 画像の幅（256は0と記録）
+    uint8_t height;        // 画像の高さ（256は0と記録）
+    uint8_t colorCount;    // カラーパレットの数（0でOK）
+    uint8_t reserved;      // 予約領域（常に0）
+    uint16_t planes;       // カラープレーン数（常に1）
+    uint16_t bitCount;     // ビット深度（32: RGBA）
+    uint32_t sizeInBytes;  // 画像データのバイト数
+    uint32_t offset;       // 画像データへのオフセット
+};
+
+void pngToIco(const std::string inputPngPath, const std::string outputIcoPath) {
     int width, height, channels;
-    unsigned char* data = stbi_load(inputFile, &width, &height, &channels, 4); // 4 = RGBA
-    if (!data) {
-        std::cerr << "Failed to load image: " << inputFile << std::endl;
-        return 1;
+    uint8_t* pngData = stbi_load(inputPngPath.c_str(), &width, &height, &channels, 4); // RGBAとして読み込む
+    if (!pngData) {
+        std::cerr << "Failed to load PNG: " << inputPngPath << "\nEnterキーで終了します";
+		std::cin.get();
+        return;
     }
 
-    // ICOヘッダを書き込む
-    FILE* output = fopen(outputFile, "wb");
-    if (!output) {
-        std::cerr << "Failed to open output file: " << outputFile << std::endl;
-        stbi_image_free(data);
-        return 1;
+    if (width != 256 || height != 256) {
+        std::cerr << "Only 256x256 PNGs are supported.\nEnterキーで終了します";
+		stbi_image_free(pngData);
+		std::cin.get();
+        return;
     }
 
-    // ICOファイルのヘッダ (1枚の画像のみ)
-    unsigned char icoHeader[6] = {0, 0, 1, 0, 1, 0};
-    fwrite(icoHeader, sizeof(icoHeader), 1, output);
+    // ICOファイルの作成
+    std::ofstream icoFile(outputIcoPath, std::ios::binary);
+    if (!icoFile) {
+        std::cerr << "Failed to create ICO file: " << outputIcoPath << "\nEnterキーで終了します";
+        stbi_image_free(pngData);
+		std::cin.get();
+        return;
+    }
 
-    // 画像エントリ情報
-    unsigned char entry[16] = {};
-    entry[0] = static_cast<unsigned char>(width);  // 幅
-    entry[1] = static_cast<unsigned char>(height); // 高さ
-    entry[2] = 0; // 色数 (0=256色以上)
-    entry[3] = 0; // 予約 (0)
-    entry[4] = 1; // 色深度 (1 = RGBA)
-    entry[5] = 32; // ビット深度 (32bit)
-    uint32_t imageSize = width * height * 4; // RGBAのデータサイズ
-    entry[8] = imageSize & 0xFF;
-    entry[9] = (imageSize >> 8) & 0xFF;
-    entry[10] = (imageSize >> 16) & 0xFF;
-    entry[11] = (imageSize >> 24) & 0xFF;
-    uint32_t offset = sizeof(icoHeader) + sizeof(entry);
-    entry[12] = offset & 0xFF;
-    entry[13] = (offset >> 8) & 0xFF;
-    entry[14] = (offset >> 16) & 0xFF;
-    entry[15] = (offset >> 24) & 0xFF;
-    fwrite(entry, sizeof(entry), 1, output);
+    // ヘッダーの書き込み
+    IcoHeader header = {0, 1, 1};
+    icoFile.write(reinterpret_cast<const char*>(&header), sizeof(header));
 
-    // PNGデータをICOに埋め込む (簡略化)
-    fwrite(data, imageSize, 1, output);
+    // エントリの書き込み
+    IcoEntry entry = {};
+    entry.width = 0;  // 256は0と記録
+    entry.height = 0; // 同上
+    entry.colorCount = 0;
+    entry.reserved = 0;
+    entry.planes = 1;
+    entry.bitCount = 32;
+    entry.sizeInBytes = width * height * 4 + 40; // DIBヘッダー + 画像データ
+    entry.offset = sizeof(IcoHeader) + sizeof(IcoEntry); // ヘッダー後の位置
 
-    // 終了処理
-    fclose(output);
-    stbi_image_free(data);
+    icoFile.write(reinterpret_cast<const char*>(&entry), sizeof(entry));
 
-    return 0;
+    // DIBヘッダーの書き込み
+    uint32_t dibHeader[10] = {
+        40,             // ヘッダーサイズ
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height * 2), // 上下反転
+        1 | (32 << 16), // プレーン数とビット深度
+        0, 0, 0, 0, 0, 0
+    };
+    icoFile.write(reinterpret_cast<const char*>(dibHeader), sizeof(dibHeader));
+
+    // ピクセルデータの書き込み（上下反転）
+    for (int y = height - 1; y >= 0; --y) {
+        icoFile.write(reinterpret_cast<const char*>(pngData + y * width * 4), width * 4);
+    }
+
+    stbi_image_free(pngData);
+    icoFile.close();
 }
 
 // ファイルハッシュ計算

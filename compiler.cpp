@@ -94,7 +94,7 @@ void task() {
 void userInput() {
 	std::cout << "独自オプション: ";
 	std::getline(std::cin,original);
-	if (original == "skip") {
+	if (is_or(original,"skip"," ","s")) {
 		original.clear();
 		exename.clear();
 		addlibrary.clear();
@@ -168,7 +168,7 @@ void writeMK() {
 	if (original.contains("/nog++")) compilerCPPMode = false; else compilerCPPMode = true;
 	if (original.contains("/dll")) {
 		dllCompileCMD =
-			compilerM() + " -shared -o " + exename + " " + sourceFile + " " + 
+			compilerM() + " -shared -o " + exename + ".dll " + sourceFile + ".cpp " + 
 			cp932 + " " + stdcpp23 + " " + option + " -Ic:/msys64/mingw64/include " + include_qt6 + " -Lc:/msys64/mingw64/lib " + addlibrary_o;
 		return;
 	}
@@ -194,7 +194,12 @@ inline void core() {
 	task();
 	flags();
 	/*if (calculateCRC32(mkpath) != hash) 未来の自分へ 効率化頼んだ*/writeMK();
-	int returnCode = cmd((dllCompileCMD.empty()? "c:/GnuWin32/bin/make.exe -B -f " + mkpath : dllCompileCMD)); // 核
+	int returnCode = 404;
+	if (dllCompileCMD.empty()) returnCode = cmd("c:/GnuWin32/bin/make.exe -B -f " + mkpath); // 核
+		else {
+			std::cout << dllCompileCMD << "\n";
+			returnCode = cmd(dllCompileCMD);
+		}
 	if (returnCode==0) std::cout << "成功\n"; else std::cout << "エラー[" << returnCode << "]\n\n";
 }
 
@@ -311,8 +316,10 @@ int main(int argc, char *argv[]) {
 		if (inputExtension == ".ybp2") readYBP(argv);
 		else if (inputExtension == ".mk") inputMK=true;
 		else if (inputExtension == ".png") {
-			DLL<int, const std::string&, const std::string&> pngToIco(dll, "pngToIco");
+			DLL<void, const std::string&, const std::string&> pngToIco(dll, "pngToIco");
 			pngToIco(sourceFile+".png", sourceFile+".ico");
+			std::cout << sourceFile << "\n";
+			std::cin.get();
 			return 0;
 		}
 		else {

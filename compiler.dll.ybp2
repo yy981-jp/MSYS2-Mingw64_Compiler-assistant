@@ -2,4 +2,4 @@ compiler.dll
 compiler
 -lz
 null
-:dll
+/dll
